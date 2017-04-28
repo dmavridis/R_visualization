@@ -1,0 +1,408 @@
+Wine Quality Whites by Dimitris
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(ggthemes) 
+library(gridExtra)
+
+# install.packages("corrplot")
+library(corrplot)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+wines = read.csv('wineQualityWhites.csv')
+```
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+```{r echo=FALSE}
+dim(wines)
+str(wines)
+summary(wines)
+```
+
+The dataset consists of 4898 samples with 13 observed variables. 
+The target feature is the Quality of the wine, which is provided as a grade given by experts.
+There is a variable of no insterest for the analysis which the sample number. 
+The rest of 11 independent variables, are wine related chemical or physical properties.
+
+
+### What is/are the main feature(s) of interest in your dataset?
+The main feauture of interest is the Quality of the white Wine and which of the chemical properties are affecting it. 
+
+
+```{r echo=FALSE, Quality_Histogram}
+
+# Definition of create_plot function
+create_plot <- function(varname, binwidth = 0.1, color = I("blue")) {
+  return(ggplot(aes_string(x = varname), data = wines) + geom_histogram(binwidth = binwidth, fill= color, 
+                                                                        col=I("black"), alpha=I(.5)))
+}
+
+create_plot('quality', 0.5, I("blue")) +
+scale_x_continuous(limits = c(1,10), breaks = seq(1,10,1)) +
+xlab('Quality')
+
+summary(wines$quality)
+
+```
+The histogram shows a normal distribution for the quality. The mode of the distribution is 6 while grades 5 and 7 follow. There are few ones less than 5 and greater than 8. In order to create catagorical data, I would consider grades 5 or less as Low quality, 6 and 7 of Good Quality and 8 or more of Excellent quality.
+
+```{r echo=FALSE}
+wines$quality_grade <- cut(wines$quality,
+                     breaks=c(-Inf, 5, 7, Inf),
+                     labels=c("Low","Good","Excellent"))
+
+
+summary(wines$quality_grade)
+
+ggplot(data = wines, aes(quality_grade, fill=quality_grade)) + 
+  guides(fill=FALSE) +
+  geom_bar() +
+  xlab("Wine Quality")
+
+# References 
+# http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/
+# http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/
+
+```
+
+The majority of wines belongs to the Good category. Due to the fact that the outputs are now three, it will be easier to classify the quality in dependance to the input variables. 
+
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+By intuition, I would expect that certain chemical properties will affect, such as the alcohol or the pH. Other may also affect but since I am not familiar with all the properties, the data processing should give some insight. 
+
+The histograms and the summary for the features are shown below. The x-limits have veen adjusted to ignore the outliers.
+
+
+```{r echo=FALSE,warning=FALSE, acidity_Histogram}
+
+summary(wines$fixed.acidity)
+summary(wines$volatile.acidity)
+
+a1 = create_plot('fixed.acidity', 0.125, I("green")) +
+scale_x_continuous(limits = c(4,11), breaks = seq(4,11,1)) +
+xlab('Fixed Accidity')
+  
+a2 = create_plot('volatile.acidity', 0.01, I("red")) +
+scale_x_continuous(limits = c(0,0.7), breaks = seq(0,0.7, 0.1)) +
+xlab('Volatile Accidity')
+
+grid.arrange(a1, a2)
+
+```
+
+The Fixed acidity distribution is more uniform like while the Voltatile acidity has some positive skewess. 
+
+```{r echo=FALSE, warning=FALSE, citric.acid_Histogram}
+
+ggplot(aes(citric.acid), data = wines) +
+geom_histogram( binwidth = 0.01, fill=I("yellow"), col=I("black"), alpha=I(.5)) + 
+scale_x_continuous(limits = c(0,1.2), breaks = seq(0,1.8, 0.1)) +
+xlab('Citric Acid')
+summary(wines$citric.acid)
+
+```
+
+The distribution looks normal, however there is a high occurence of 0.5 citric acid wines. 
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, residual.sugar_Histogram}
+
+create_plot('residual.sugar', 0.25, I("brown")) +
+scale_x_continuous(limits = c(0, 25), breaks = seq(0,25, 5)) +
+xlab('Residual Sugar')
+
+create_plot('residual.sugar', 0.025, I("brown")) +
+scale_x_log10(limits = c(1, 100)) +
+xlab('Residual Sugar')
+
+summary(wines$residual.sugar)
+
+```
+
+The distribution for the residual sugar is shown in linear and logarithmic scale. In the linear scale range, there are many samples in the very low range and several of them are then uniformly distributed for higher values. 
+The logarithmic scale gives better insight, as by also changing the bin width the distribution looks bimodal with modes at 2 and 10 approximately. 
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, chlorides_histogram}
+
+summary(wines$chlorides)
+
+create_plot('chlorides', 0.01, I("yellow")) +
+scale_x_continuous(limits = c(0,0.1), breaks = seq(0,0.1, 0.025)) +
+xlab('Chlorides') 
+```
+
+This distribution for the chlorides is uniform. 
+
+
+```{r echo=FALSE, message=FALSE,warning=FALSE, free_total_sulfure_histogram}
+
+s1 = create_plot('free.sulfur.dioxide', 5, I("cyan")) +
+scale_x_continuous(limits = c(0,100), breaks = seq(0,100, 20)) +
+xlab('Free Sulfur Dioxide')
+
+summary(wines$free.sulfur.dioxide)
+
+s2 = create_plot('total.sulfur.dioxide', 5, I("magenta")) +
+scale_x_continuous(limits = c(0,300), breaks = seq(0,300, 50)) +
+xlab('Total Sulfur Dioxide')
+
+summary(wines$total.sulfur.dioxide)
+
+grid.arrange(s1, s2)
+
+```
+
+The distrubutions for Free and Total Sulfur Dioxide also look uniform.
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, density}
+
+create_plot('density', 0.001, I("grey")) +
+scale_x_continuous(limits = c(0.975,1.025), breaks = seq(0.95,1.05, 0.025)) +
+xlab('Density') 
+
+summary(wines$density)
+
+```
+
+The density distribution is quite tight and has a uniform shape. 
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, pH}
+
+create_plot('pH', 0.01, I("purple")) +
+scale_x_continuous(limits = c(2.5, 4), breaks = seq(2.5, 4, 0.25)) +
+xlab('pH')
+
+summary(wines$pH)
+
+```
+
+The pH property follows the uniform pattern.
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, sulphates}
+
+create_plot('sulphates', 0.025, I("pink")) +
+scale_x_continuous(limits = c(0, 1.5), breaks = seq(0, 1.5, 0.25)) +
+xlab('Sulphates')
+
+summary(wines$sulphates)
+
+```
+The suplhates distribution has a positive skew. 
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE, alcohol}
+
+create_plot('alcohol', 0.25, I("navy")) +
+scale_x_continuous(limits = c(8, 15), breaks = seq(8, 15, 1)) +
+xlab('Alcohol')
+
+summary(wines$alcohol)
+
+```
+The pattern for the alcohol is a bit irregular but the border of it looks positively skewed. 
+
+
+### Did you create any new variables from existing variables in the dataset?
+I created the categorical variable for the quality of the wines. This provides fewer outputs for classification without sacrificing the essence of the analysis.  
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+All the distributions looked reasonable. For the plotting of the histograms, outliers were rejected. 
+
+# Bivariate Plots Section
+In this section the relationships between the variables are explored. 
+
+First calculation to extract is the correlation between the variables and the output quality. 
+
+```{r echo=FALSE,warning=FALSE}
+s_data = subset(wines, select = -c(X,quality_grade))
+cor(s_data, s_data$quality)
+
+```
+Out of the various correlations of the variables, some of them are are positive, the highest being the alcohol at 0.43 and from the negative ones, the density has the largest magnitude at -0.3.
+It is worth plotting the two variables using ggpairs. 
+
+
+```{r echo=FALSE,warning=FALSE}
+
+library(GGally)
+
+ggpairs(wines, columns = c("alcohol", "density", "quality")) +
+  theme(axis.text = element_text(size = rel(0.4)))
+```
+  
+Interestingly enough, the alcohol and the density have strong correlation between them.
+The above plots can look a bit better and help us extract more information, so they will be plot individually. 
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+
+ggplot(aes(alcohol, quality, color = quality_grade), data = wines) +
+  geom_jitter(alpha = 1/4) +
+  scale_x_continuous(limits = c(8, 14)) +
+   labs(color = "")
+  
+  ggplot(aes(density, quality, color = quality_grade), data = wines) +
+  geom_jitter(alpha = 1/4) +
+  scale_x_continuous(limits = c(0.985, 1.005))+
+     labs(color = "")
+
+```
+
+The quality as number, is plotted in the first graph and the color of the quality as a category is overlapped to provide better separation. Some denser and sparser parts are observed giving an initial ideal of how the quality vs the two variables with the higher correlation, the alcohol and the density. 
+In the following plots, some diffent visualizations are provided that will help to build the conclusions. 
+In the quality vs alcohol graph, using jitter of 1/4, the lower quality stripe is denser at lower alcohol levels. 
+Inversely, for the density the lower quality wines tend to be found at higher densities.
+
+
+To see further relationships between features, the cross-corellations are extracted and plotted using the following code. 
+
+
+```{r echo=FALSE,warning=FALSE,opts_chunk$set(comment=NA, fig.height=12)}
+
+s_data = subset(wines, select = -c(X,quality_grade, quality))
+cor(s_data)
+res2 = cor(as.matrix(s_data))
+corrplot(res2, type = "lower", order = "hclust", 
+         tl.col = "black", tl.srt = 45, method='ellipse')
+
+# reference
+# http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+
+```
+
+From the graph, which is much easy to read despite the large number of variables, there seem to be some strong correlations between certain feutures. 
+Density and Aclohol have strong negative correlation of -0.78. From my personal experience, I wouldn't predict such correlation. 
+Also density has strong positive correlation of 0.83 with residual sugar. That number, is more justifiable to me as the density can be justified to more sugars. 
+
+In a potential model therefore, these three variables could be merged into one without sacrificing too much accuracy. Also, several other parameters that have close to 0 correlation to quality can be eliminated. 
+
+
+In terms of the feature of interest, density and the alcohol have the higher correlation to the quality. Their trend can be verified using the following plots, one boxplot and one violin plot. 
+
+```{r echo=FALSE,warning=FALSE}
+ggplot(data = wines, aes(quality_grade, density)) + 
+  geom_boxplot() +
+  xlab("Wine Quality") +
+  ylab("Density" ) +
+  scale_y_continuous(limits = c(0.985, 1.005))
+
+ggplot(data = wines, aes(quality_grade, alcohol)) + 
+  geom_violin() +
+  xlab("Wine Quality ") +
+  ylab("Alcohol") +
+  scale_y_continuous(limits = c(7.5, 14))
+
+```
+
+For better quality, higher alcohol and lower density are more favourble.
+Further explanation will be given in the final section. 
+
+# Multivariate Plots Section
+
+Since the density and the alcohol have the higher correlation to the quality, it will be interesting to see the way the are plotted together and their relation to the quality grade. The plot actually shows, correlation between the two features and some regions that are colored according to the quality. 
+
+```{r echo=FALSE, warning=FALSE ,Multivariate_Plots}
+ggplot(aes(alcohol, density, color = quality_grade), data = wines) +
+  geom_jitter(alpha = 0.4) +
+  scale_color_brewer(palette = "YlGnBu") +
+  guides(fill=guide_legend(title=NULL))+
+  scale_x_continuous(limits = c(8, 14)) +
+  scale_y_continuous(limits = c(0.985, 1.005))+
+ labs(color = "Quality")
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+As shown in the above graph, the density and alcohol are correlated between themselves and also have the stronger effect on the quality grade. 
+
+
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE,warning=FALSE, Plot_One}
+ggplot(aes(alcohol, density, color = quality_grade), data = wines) +
+  geom_jitter(alpha = 0.4) +
+  scale_color_brewer(palette = "YlGnBu") +
+  guides(fill=guide_legend(title=NULL))+
+  scale_x_continuous(limits = c(8, 14)) +
+  scale_y_continuous(limits = c(0.985, 1.005))+
+  xlab("Alcohol [% by Volume]") +
+  ylab("Density [g / cm^3]") +
+  ggtitle("Density and Alcohol for the Wine Samples, colored by Quality")+
+ labs(color = "Quality")
+
+```
+
+### Description One
+In the first graph, each wine is positioned as a point, with the density and alcohol values being the coordinates. The quality of the wine, as a categorical variable, is determined by specific colour. This allows to see particular coloured regions.
+The density vs alcohol graph shows indeed relatively high correlation, being tight. The correlation value was extracted to be -0.78. The colour is showing the quality and a trend is observed where the lower quality wines are, with higher probability, of lower alcohol and higher density values.
+
+
+### Plot Two
+```{r echo=FALSE,warning=FALSE, Plot_Two}
+ggplot(data = wines, aes(quality_grade, density, fill = I('steelblue'))) + 
+  geom_boxplot() +
+  xlab("Wine Quality") +
+  ylab("Density [g / cm^3]") +
+  ggtitle("Wine Density Boxplot across Quality") +
+  scale_y_continuous(limits = c(0.985, 1.005))
+```
+
+### Description Two
+Further analyzing the conclusions from the first graphs, the boxplot of the density vs the Wine quality is a cleaner graph with less visual noise. The median and the quantiles confirm that lower density, most probably gives better quality. There is some overlap for certain density ranges but the trend is clear.
+
+### Plot Three
+```{r echo=FALSE,warning=FALSE, Plot_Three}
+wines$alcohol_range <- cut(wines$alcohol,
+                     breaks=c(-Inf, 9, 11, 13,  Inf),
+                     labels=c("Low","Medium", "High", "Very High"))
+
+summary(wines$alcohol_range)
+
+ggplot(data = wines, aes(quality_grade, alcohol, fill=I('navyblue'))) + 
+  geom_violin() +
+  xlab("Wine Quality ") +
+  ylab("Alcohol [% By Volume]") +
+  ggtitle("Violin Plot of Alcohol across Wine Quality") +
+  scale_y_continuous(limits = c(7.5, 14))
+```
+
+### Description Three
+The violin plot, shown in the last figure, gives more information regarding the distribution of the alcogol for each quality range.
+The lower quality is skewed to lower levels of alcohol. The Good quality is almost uniform across a large range. The Excellent quality is skewed to higher alcohol values. The trend is clear for the Low and Excellent types, where less and more alcohol values respectively occur. 
+The fact that the Good quality provides essentially no information is the reason that the correlation coefficient between alcohol and quality is not higher.
+
+
+
+# Reflection
+
+The white wines dataset is presented and analyzed. The major points of the explanatory analysis lies in finding the components that have bigger contribution to the determination of the quality. From plotting the graphs and calculating the correlation coefficients, it looks that the alcohol and the density are the strongest contributors. 
+For the alcohol, the more is the better while for the density the trend is reversed and less dense wines have higher probability to be a member of the highest quality.
+
+The analyzed data can be introduced into a machine learning algorithm and be classified according to a more accurate model.
+Nevertheless, even if we don't get into more mathematics, a quick intuition can be acquired, just by using the right kind of graphs. 
+
+Since this project was my first introduction to R, I found it a bit challenging and needed some time and trial and error to grasp some of the concepts.
+
+Another challenging issue, from the graphs themselves, I noticed that the binwidth can have significant effect to the shape of a distribution and can lead to different results. Therefore, there need to be tried several values to get an idea of the actual distribution. 
+
+I enjoyed the exploratory phase and trying to find the underlying relationships betweem the features. 
